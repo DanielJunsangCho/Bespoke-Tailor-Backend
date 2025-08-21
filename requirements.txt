@@ -1,0 +1,9 @@
+flask
+flask-cors
+mcp
+anthropic
+gunicorn
+asyncio
+typing
+contextlib
+dotenv
