@@ -1,0 +1,3 @@
+[submodule "latex-mcp"]
+	path = latex-mcp
+	url = https://github.com/TheTailorRetailored/latex-mcp.git
