@@ -3,7 +3,4 @@ flask-cors
 mcp
 anthropic
 gunicorn
-asyncio
-typing
-contextlib
-dotenv
+python-dotenv
