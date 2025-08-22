@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from mcp_client.client import MCPClient
+from mcp_client.client import MCPClient, cleanup
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -15,7 +15,9 @@ CORS(app, resources={
 @app.route('/tailor_resume')
 def tailor_resume():
     client = MCPClient()
-    return client.chat_loop()
+    resume = client.chat_loop()
+    client.cleanup()
+    return resume
 
 
 
