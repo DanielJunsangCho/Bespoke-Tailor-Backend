@@ -3,6 +3,7 @@ from contextlib import AsyncExitStack
 import asyncio
 import threading
 import time
+import json
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -61,7 +62,7 @@ class MCPClient:
         } for tool in response.tools]
 
         # Loop to handle multiple rounds of tool calls
-        final_text = []
+        url = ''
         max_iterations = 10  # Prevent infinite loops
         iteration = 0
         
@@ -85,11 +86,6 @@ class MCPClient:
             # Check for tool calls
             tool_calls = [content for content in response.content if content.type == 'tool_use']
             
-            # Add any text content to final output
-            for content in response.content:
-                if content.type == 'text':
-                    final_text.append(content.text)
-            
             # If no tool calls, Claude is done
             if not tool_calls:
                 break
@@ -103,22 +99,24 @@ class MCPClient:
                 # Execute tool call
                 result = await self.session.call_tool(tool_name, tool_args)
                 tool_content = result.content[0].text if result.content else str(result)
-                print(tool_content)
                 
                 tool_result_contents.append({
                     "type": "tool_result",
                     "tool_use_id": content.id,
                     "content": tool_content
                 })
-            
+
+                if "url" in tool_content: 
+                    tool_content = json.loads(tool_content)
+                    url = tool_content["url"]
+                    
             # Add all tool results as a single user message
             if tool_result_contents:
                 messages.append({
                     "role": "user", 
                     "content": tool_result_contents
                 })
-
-        return "\n".join(final_text)
+        return url
     
     async def cleanup(self):
         """Clean up resources"""

@@ -40,10 +40,6 @@ def check_rate_limit(client_ip):
     request_counts[client_ip].append(now)
     return True
 
-# Initialize MCP connection pool
-print("Initializing MCP connection pool...")
-mcp_pool.initialize_pool()
-
 @app.route('/api/tailor_resume', methods=['POST'])
 def tailor_resume():
     try:
@@ -116,6 +112,9 @@ atexit.register(cleanup_resources)
 
 if __name__ == '__main__':
     try:
+        print("Initializing MCP connection pool...")
+        mcp_pool.initialize_pool()  
+
         app.run(debug=True, port=5000)
     except KeyboardInterrupt:
         print("\nShutting down gracefully...")
