@@ -1,3 +1,2 @@
 mcp_client/.env
-mcp_client/.venv
-mcp_client/uv.lock
+uv.lock
