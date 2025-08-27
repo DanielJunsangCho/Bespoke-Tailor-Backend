@@ -1,20 +1,23 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from mcp_client.client import MCPConnectionPool
 import atexit
 import os
 import time
 from collections import defaultdict
 
-app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            "chrome-extension:fbcfniofgnkajmaijeogmahmbchncdbl"
-        ]
-    }
-})
-# CORS(app)
+app = FastAPI(title="Bespoke Resume Backend")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "chrome-extension:fbcfniofgnkajmaijeogmahmbchncdbl"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize connection pool
 server_path = os.path.join(os.path.dirname(__file__), "latex-mcp", "server.py")
@@ -25,7 +28,7 @@ request_counts = defaultdict(list)
 RATE_LIMIT_WINDOW = 60  # 1 minute
 RATE_LIMIT_MAX_REQUESTS = 10  # 10 requests per minute per IP
 
-def check_rate_limit(client_ip):
+def check_rate_limit(client_ip: str) -> bool:
     """Check if client IP has exceeded rate limit"""
     now = time.time()
     # Clean old requests
@@ -40,36 +43,33 @@ def check_rate_limit(client_ip):
     request_counts[client_ip].append(now)
     return True
 
-@app.route('/api/tailor_resume', methods=['POST'])
-def tailor_resume():
+class ResumeRequest(BaseModel):
+    resume_data: str
+    job_description: str
+
+@app.post('/api/tailor_resume')
+def tailor_resume(request_data: ResumeRequest, request: Request):
     try:
         # Rate limiting check
-        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+        client_ip = request.headers.get('X-Forwarded-For', request.client.host)
         if not check_rate_limit(client_ip):
-            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+            raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
         
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-        
-        resume_data = data.get('resume_data', '')
-        job_description = data.get('job_description', '')
-        
-        if not resume_data or not job_description:
-            return jsonify({"error": "Missing resume_data or job_description"}), 400
+        if not request_data.resume_data or not request_data.job_description:
+            raise HTTPException(status_code=400, detail="Missing resume_data or job_description")
         
         # Process using connection pool
-        result = mcp_pool.process_resume_request(resume_data, job_description)
+        result = mcp_pool.process_resume_request(request_data.resume_data, request_data.job_description)
         
         if result.startswith("Error:"):
-            return jsonify({"error": result}), 503
+            raise HTTPException(status_code=503, detail=result)
         
-        return jsonify({"result": result})
+        return {"result": result}
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.route('/health')
+@app.get('/health')
 def health_check():
     """Health check endpoint"""
     pool_status = {
@@ -83,20 +83,25 @@ def health_check():
     is_healthy = mcp_pool.initialized and len(mcp_pool.available) > 0
     status_code = 200 if is_healthy else 503
     
-    return jsonify({
+    response_data = {
         "status": "healthy" if is_healthy else "unhealthy", 
         "mcp_pool": pool_status
-    }), status_code
+    }
+    
+    if not is_healthy:
+        raise HTTPException(status_code=503, detail=response_data)
+    
+    return response_data
 
-@app.route('/health/reconnect', methods=['POST'])
+@app.post('/health/reconnect')
 def force_reconnect():
     """Force reconnect all MCP connections - for debugging"""
     try:
         mcp_pool.cleanup_pool()
         mcp_pool.initialize_pool()
-        return jsonify({"message": "MCP pool reconnected successfully"})
+        return {"message": "MCP pool reconnected successfully"}
     except Exception as e:
-        return jsonify({"error": f"Failed to reconnect: {str(e)}"}), 500
+        raise HTTPException(status_code=500, detail=f"Failed to reconnect: {str(e)}")
 
 # Cleanup function
 def cleanup_resources():
@@ -110,14 +115,23 @@ def cleanup_resources():
 # Register cleanup on app shutdown
 atexit.register(cleanup_resources)
 
-if __name__ == '__main__':
-    try:
-        print("Initializing MCP connection pool...")
-        mcp_pool.initialize_pool()  
+@app.on_event("startup")
+async def startup_event():
+    print("Initializing MCP connection pool...")
+    # Initialize pool in a thread to avoid event loop conflicts
+    import threading
+    def init_pool():
+        mcp_pool.initialize_pool()
+    
+    init_thread = threading.Thread(target=init_pool)
+    init_thread.start()
+    init_thread.join(timeout=30)  # Wait up to 30 seconds
 
-        app.run(debug=True, port=5000)
-    except KeyboardInterrupt:
-        print("\nShutting down gracefully...")
-        cleanup_resources()
-    finally:
-        cleanup_resources()
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Shutting down gracefully...")
+    cleanup_resources()
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

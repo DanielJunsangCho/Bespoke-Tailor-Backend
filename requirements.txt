@@ -1,6 +1,6 @@
-flask
-flask-cors
+fastapi
+pydantic
 mcp
 anthropic
-gunicorn
+uvicorn
 python-dotenv
