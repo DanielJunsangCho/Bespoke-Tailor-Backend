@@ -6,4 +6,3 @@ uvicorn
 python-dotenv
 fastmcp
 jinja2
-pyyamml
