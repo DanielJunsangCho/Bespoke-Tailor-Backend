@@ -47,19 +47,19 @@ def register(mcp):
         if not p.exists(): raise FileNotFoundError(f"Template '{name}' not found")
         return p.read_text(encoding="utf-8")
 
-    @mcp.tool
-    def list_snippets() -> List[Dict[str, Any]]:
-        """List all available LaTeX snippets/macros with their descriptions."""
-        return list_available_snippets()
+    # @mcp.tool
+    # def list_snippets() -> List[Dict[str, Any]]:
+    #     """List all available LaTeX snippets/macros with their descriptions."""
+    #     return list_available_snippets()
 
-    @mcp.tool
-    def get_snippet_info(name: str) -> Dict[str, Any]:
-        """Get detailed information about a snippet including parameters and usage."""
-        return get_snippet_info(name)
+    # @mcp.tool
+    # def get_snippet_info(name: str) -> Dict[str, Any]:
+    #     """Get detailed information about a snippet including parameters and usage."""
+    #     return get_snippet_info(name)
 
-    @mcp.tool
-    def render_snippet(name: str, **parameters) -> str:
-        """Render a LaTeX snippet with the provided parameters."""
-        return render_snippet(name, **parameters)
+    # @mcp.tool
+    # def render_snippet(name: str, **parameters) -> str:
+    #     """Render a LaTeX snippet with the provided parameters."""
+    #     return render_snippet(name, **parameters)
 
 
