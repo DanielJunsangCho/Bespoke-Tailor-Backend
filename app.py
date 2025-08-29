@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Initialize connection pool
-server_path = os.path.join(os.path.dirname(__file__), "latex-mcp", "server.py")
+server_path = os.path.join(os.path.dirname(__file__), "latex-mcp", "mcp_server.py")
 mcp_pool = MCPConnectionPool(server_path, pool_size=3)
 
 # Rate limiting storage
