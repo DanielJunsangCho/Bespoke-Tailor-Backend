@@ -125,7 +125,7 @@ async def startup_event():
     
     init_thread = threading.Thread(target=init_pool)
     init_thread.start()
-    init_thread.join(timeout=30)  # Wait up to 30 seconds
+    init_thread.join(timeout=60)  
 
 @app.on_event("shutdown")
 async def shutdown_event():
