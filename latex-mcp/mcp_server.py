@@ -9,5 +9,10 @@ from plugins.latex import register as register_latex
 register_latex(mcp)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 0))
-    mcp.run(transport="http", host="0.0.0.0", port=port, path="/mcp")
+    # Only run if explicitly called with MCP_RUN environment variable
+    if os.environ.get("MCP_RUN") == "true":
+        port = int(os.environ.get("PORT", 0))
+        mcp.run(transport="http", host="0.0.0.0", port=port, path="/mcp")
+    else:
+        # Run as stdio server for subprocess usage
+        mcp.run()
