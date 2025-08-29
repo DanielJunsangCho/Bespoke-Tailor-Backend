@@ -166,6 +166,8 @@ class MCPConnectionPool:
                     print(f"Initialized MCP connection {i+1}/{self.pool_size}")
                 except Exception as e:
                     print(f"Failed to initialize MCP connection {i+1}: {e}")
+                    import traceback
+                    print(f"Full error trace: {traceback.format_exc()}")
         
         self._run_async(_init())
         self.initialized = True
